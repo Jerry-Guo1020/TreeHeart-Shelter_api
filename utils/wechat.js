@@ -2,17 +2,27 @@
 const axios = require('axios');
 const { appid, secret } = require('../utils/server_config').wx;
 
+// 本地mock，直接返回固定openid（用于apifox本地联调）
 exports.getOpenidByCode = async (code) => {
-  // 官方API: https://developers.weixin.qq.com/miniprogram/dev/OpenApiDoc/user-login/code2Session.html
-  const url = `https://api.weixin.qq.com/sns/jscode2session?appid=${appid}&secret=${secret}&js_code=${code}&grant_type=authorization_code`;
-  try {
-    const res = await axios.get(url);
-    if (res.data && res.data.openid) {
-      return res.data.openid;
-    }
-    return null;
-  } catch (err) {
-    return null;
-  }
-  // return 'test_openid_123456';
+  console.log('【Mock模式】getOpenidByCode called, code:', code);
+  return 'test_openid_123456';
 };
+
+// ====== 微信真机调试，请用下面这段，取消注释即可 ======
+// const axios = require('axios');
+// const { appid, secret } = require('../utils/server_config').wx;
+
+// exports.getOpenidByCode = async (code) => {
+//   const url = `https://api.weixin.qq.com/sns/jscode2session?appid=${appid}&secret=${secret}&js_code=${code}&grant_type=authorization_code`;
+//   try {
+//     const res = await axios.get(url);
+//     console.log('【微信服务器模式】返回:', res.data);
+//     if (res.data && res.data.openid) {
+//       return res.data.openid;
+//     }
+//     return null;
+//   } catch (err) {
+//     console.error('getOpenidByCode微信API请求错误:', err);
+//     return null;
+//   }
+// };

@@ -5,18 +5,14 @@
   const WxLogin = require('../entity/user/WxLogin');
 
   // 微信登录接口
-  router.post('/wechat-login', async (req, res) => {
-    let wxLogin = new WxLogin(req);
-    let flag = wxLogin.check();
-    if (!flag.success) {
-      return res.status(400).json(flag);
-    }
-    try {
-      const result = await loginService.wechatLogin(wxLogin);
-      res.status(result.code).json(result);
-    } catch (err) {
-      res.status(500).json((new Response()).fail(500, "微信登录失败"));
-    }
-  });
+router.post('/wechat-login', async (req, res) => {
+  try {
+    const result = await loginService.wechatLogin(req.body);
+    res.status(result.code).json(result);
+  } catch (err) {
+    console.error('接口/wechat-login异常:', err);
+    res.status(500).json({ code: 500, msg: "微信登录失败", data: null });
+  }
+});
 
-  module.exports = router;
+module.exports = router;
