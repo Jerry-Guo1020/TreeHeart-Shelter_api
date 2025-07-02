@@ -15,18 +15,14 @@ router.post('/wechat-login', async (req, res) => {
 
 // 游客登录
 router.post('/guest-login', async (req, res) => {
-  res.json({
-    code: 200,
-    msg: '游客登录成功',
-    data: {
-      token: 'guest-token-' + Date.now(),
-      user: {
-        id: 0,
-        nickname: '游客',
-        avatar: '', // 可以给个默认头像链接
-      }
-    }
-  });
+  try {
+    // {{ edit_1 }}
+    const result = await loginService.guestLogin(req.body); // 调用 loginService 中的 guestLogin 方法
+    res.status(result.code).json(result);
+  } catch (err) {
+    console.error('游客登录异常:', err);
+    res.status(500).json({ code: 500, msg: '游客登录失败', data: null });
+  }
 });
 
 module.exports = router;
