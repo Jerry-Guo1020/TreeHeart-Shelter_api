@@ -1,7 +1,6 @@
 const loginDao = require('../dao/loginDao');
 const { getOpenidByCode } = require('../utils/wechat');
 const { signJwtToken } = require('../utils/jwt');
-const Response = require('../entity/http/Response');
 
 exports.wechatLogin = async (wxLogin) => {
   try {
@@ -13,7 +12,6 @@ exports.wechatLogin = async (wxLogin) => {
 
     let user = await loginDao.getUserByOpenid(openid);
 
-    // 没有就自动注册
     if (!user) {
       const newUser = {
         openid,
@@ -26,7 +24,6 @@ exports.wechatLogin = async (wxLogin) => {
       user = await loginDao.getUserByOpenid(openid);
     }
 
-    // 生成token
     const token = signJwtToken({ uid: user.id, openid: user.openid });
 
     return {
