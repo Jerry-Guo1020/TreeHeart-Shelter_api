@@ -4,7 +4,7 @@ const { appid, secret } = require('../utils/server_config').wx;
 
 // 本地mock，直接返回固定openid（用于apifox本地联调）
 exports.getOpenidByCode = async (code) => {
-  if (code === 'test_code_from_miniprogram') { // 如果传入这个 code，会直接返回一个固定的 openid
+  if (code === 'test_code_from_miniprogram') { 
     console.log('Mocking openid for test code');
     return 'test_openid_123456'; // 这是一个有效值，不会触发 !openid
   }
