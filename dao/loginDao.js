@@ -55,6 +55,33 @@ exports.addUser = async (user) => {
   }
 };
 
+// {{ edit_1 }}
+// 更新用户信息
+exports.updateUser = async (userId, updateFields) => {
+  try {
+    console.log(`【loginDao】准备更新用户ID: ${userId} 的信息:`, updateFields);
+    const fields = Object.keys(updateFields);
+    const values = Object.values(updateFields);
+
+    if (fields.length === 0) {
+      console.log('【loginDao】没有要更新的字段。');
+      return null;
+    }
+
+    // 构建 SET 子句，例如 "sex = ?, college = ?"
+    const setClause = fields.map(field => `${field} = ?`).join(', ');
+    const sql = `UPDATE User SET ${setClause}, updateTime = CURRENT_TIMESTAMP WHERE id = ?`;
+    const params = [...values, userId];
+
+    const result = await mysql.sqlExec(sql, params);
+    console.log('【loginDao】更新用户结果:', result);
+    return result;
+  } catch (err) {
+    console.error('loginDao.updateUser 错误:', err);
+    throw err;
+  }
+};
+
 // 原有的 getUserByOpenid 如果不再使用，可以删除或注释掉
 exports.getUserByOpenid = async (openid) => {
   try {
