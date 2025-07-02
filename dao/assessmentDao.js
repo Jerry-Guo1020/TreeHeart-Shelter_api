@@ -8,11 +8,8 @@ const mysql = require('../db/mysql57');
 exports.getQuestionsByAssessmentId = async (assessmentId) => {
   const sql = `SELECT id, content, options FROM AssessmentQuestion WHERE assessmentId = ?`;
   const rows = await mysql.sqlExec(sql, [assessmentId]);
-  // 确保 options 字段被解析为 JSON 对象
-  return rows.map(row => ({
-    ...row,
-    options: JSON.parse(row.options)
-  }));
+  // 移除 JSON.parse，因为 mysql2 驱动在读取 JSON 类型字段时通常会自动解析
+  return rows;
 };
 
 /**
