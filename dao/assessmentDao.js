@@ -1,4 +1,4 @@
-const mysql = require('../db/mysql');
+const mysql = require('../db/mysql57');
 
 exports.getQuestionsByAssessmentId = async (assessmentId) => {
   const sql = 'SELECT id, content, options FROM AssessmentQuestion WHERE assessmentId = ? ORDER BY id ASC';
