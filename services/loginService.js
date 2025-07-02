@@ -6,7 +6,7 @@ exports.wechatLogin = async (wxLogin) => {
   try {
     const { code, userInfo } = wxLogin;
     const openid = await getOpenidByCode(code);
-    if (!openid) {
+    if (!openid) { // 只有当 openid 为 null 或 undefined 时，才会进入这里
       return { code: 400, msg: "获取openid失败", data: null };
     }
 
