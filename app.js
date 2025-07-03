@@ -17,6 +17,12 @@ app.use('/user', userRouter); // 挂载用户路由
 // 心理测评路由
 const assessmentRouter = require('./routes/assessment'); // 导入测评路由
 app.use('/assessment', assessmentRouter); // 挂载测评路由
+
+// 帖子路由
+const postRouter = require('./routes/post');
+app.use('/post', postRouter);
+
+
 const port = 3000;
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}!`);
