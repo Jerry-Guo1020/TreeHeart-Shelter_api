@@ -64,3 +64,15 @@ exports.getUserAssessmentRecords = async (uid) => {
   `;
   return await mysql.sqlExec(sql, [uid]);
 };
+
+/**
+ * 删除指定用户的测评记录
+ * @param {number} recordId 测评记录ID
+ * @param {number} uid 用户ID (用于验证，确保用户只能删除自己的记录)
+ * @returns {Object} 删除结果，包含 affectedRows
+ */
+exports.deleteUserAssessmentRecord = async (recordId, uid) => {
+  // 确保用户只能删除自己的记录，防止越权删除
+  const sql = `DELETE FROM UserAssessmentRecord WHERE id = ? AND uid = ?`;
+  return await mysql.sqlExec(sql, [recordId, uid]);
+};
