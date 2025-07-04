@@ -1,6 +1,6 @@
 const Minio = require('minio')
 const minioClient = new Minio.Client({
-  endPoint: 'http://43.142.21.211/',
+  endPoint: '43.142.21.211',  
   port: 59000,
   useSSL: false,
   accessKey: 'jerry',
