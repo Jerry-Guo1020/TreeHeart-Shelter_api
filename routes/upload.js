@@ -22,7 +22,8 @@ router.post('/image', upload.single('file'), (req, res) => {
         [BUCKET, objectName, '已完成']
       );
       const imgId = result.insertId;
-      const url = `http://43.142.21.211:59001/${BUCKET}/${objectName}`;
+      // 这里的 URL 是直接访问 Minio 的地址
+      const url = `http://43.142.21.211:59001/${BUCKET}/${objectName}`; // 确保这个 IP 和端口是 Minio 的公共访问地址
       res.json({ code: 200, msg: '上传成功', data: { url, imgId } });
     } catch (e) {
       res.json({ code: 500, msg: '数据库保存失败' });
