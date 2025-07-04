@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const mysql = require('../db/mysql57');
+const mysql = require('../db/mysql57'); // 确保路径正确
 
+// 发布帖子接口
 router.post('/create', async (req, res) => {
   const { uid, title, content, typeName, imgId } = req.body;
 
@@ -25,6 +26,53 @@ router.post('/create', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ code: 500, msg: '服务器错误' });
+  }
+});
+
+// {{ edit_1 }}
+// 获取所有帖子类型接口
+router.get('/types', async (req, res) => {
+  try {
+    const types = await mysql.sqlExec('SELECT id, name FROM PostType');
+    res.json({ code: 200, data: types, msg: '获取帖子类型成功' });
+  } catch (err) {
+    console.error('获取帖子类型失败:', err);
+    res.status(500).json({ code: 500, msg: '获取帖子类型失败', data: null });
+  }
+});
+
+// 获取帖子列表接口
+router.get('/list', async (req, res) => {
+  try {
+    const posts = await mysql.sqlExec(`
+      SELECT
+          p.id,
+          p.uid,
+          u.nickname,
+          u.avatar,
+          pt.name AS typeName,
+          p.title,
+          p.content,
+          pi.uri AS imgUrl,
+          p.likeCount,
+          p.commentCount,
+          p.collectCount,
+          p.createTime
+      FROM
+          Post p
+      JOIN
+          User u ON p.uid = u.id
+      JOIN
+          PostType pt ON p.typeId = pt.id
+      LEFT JOIN
+          PostImg pi ON p.imgId = pi.id
+      ORDER BY
+          p.createTime DESC
+    `);
+    res.json({ code: 200, data: posts, msg: '获取帖子列表成功' });
+  } catch (err) {
+    console.error('获取帖子列表失败:', err);
+    res.status(500).json({ code: 500, msg: '获取帖子列表失败', data: null });
   }
 });
 
