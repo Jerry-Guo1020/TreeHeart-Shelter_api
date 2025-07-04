@@ -20,7 +20,11 @@ app.use('/assessment', assessmentRouter); // 挂载测评路由
 
 // 帖子路由
 const postRouter = require('./routes/post');
-app.use('/post', postRouter);
+app.use('/api/post', postRouter);
+
+// 上传接口
+const uploadRouter = require('./routes/upload');
+app.use('/api/upload', uploadRouter);
 
 
 const port = 3000;
