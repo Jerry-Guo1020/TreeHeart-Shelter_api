@@ -5,7 +5,7 @@ const multer = require('multer'); // {{ edit_1 }}
 const app = express();
 
 app.use(express.json());  // 支持 application/json 请求体
-app.use("/static", express.static(path.join(__dirname, "public")));
+app.use("/public", express.static(path.join(__dirname, "public")));
 
 // 登录的路由
 const loginRouter = require('./routes/login'); // 路径根据你实际项目
