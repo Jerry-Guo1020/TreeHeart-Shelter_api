@@ -26,10 +26,13 @@ router.post('/guest-login', async (req, res) => {
 });
 
 // 获取当前用户信息
-router.get('/user/current', async (req, res) => {
+// 假设此路由文件在主应用中被 app.use('/api/user', router) 挂载
+// 因此这里的路径直接是 '/current'
+router.get('/current', async (req, res) => { // <-- 将 '/user/current' 改为 '/current'
   try {
     // 假设你通过 JWT token 获取用户ID，或者从 session 中获取
     // 这里需要根据你的认证机制来获取用户ID
+    // 例如，如果使用 JWT 中间件，用户ID可能在 req.user.id 或 req.auth.id
     const userId = req.user ? req.user.id : null; // 示例：如果使用 JWT，req.user 会被中间件填充
 
     if (!userId) {
