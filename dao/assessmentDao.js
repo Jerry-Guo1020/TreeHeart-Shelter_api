@@ -1,4 +1,5 @@
 const mysql = require('../db/mysql57');
+const db = require('../utils/db'); // 假设你有一个数据库连接工具
 
 /**
  * 获取所有测评列表
@@ -25,14 +26,26 @@ exports.getAssessmentById = async (assessmentId) => {
  * @param {number} assessmentId 测评ID
  * @returns {Array} 题目列表
  */
+/**
+ * 根据测评ID从数据库获取题目列表
+ * @param {number} assessmentId 测评ID
+ * @returns {Promise<Array|null>} 题目列表或null
+ */
 exports.getQuestionsByAssessmentId = async (assessmentId) => {
-  const sql = `SELECT id, assessmentId, content, options FROM AssessmentQuestion WHERE assessmentId = ? ORDER BY id ASC`;
-  const questions = await mysql.sqlExec(sql, [assessmentId]);
-  // 解析 options 字段，因为它是 JSON 字符串
-  return questions.map(q => ({
-    ...q,
-    options: JSON.parse(q.options) // 将 JSON 字符串解析为数组
-  }));
+  try {
+    // 假设你的题目表名为 'assessment_questions'
+    // 并且题目与测评通过 'assessment_id' 关联
+    const sql = `SELECT * FROM assessment_questions WHERE assessment_id = ? ORDER BY question_order ASC`;
+    const [rows] = await db.query(sql, [assessmentId]); // 假设 db.query 返回一个数组，第一个元素是结果行
+
+    if (rows.length > 0) {
+      return rows;
+    }
+    return null;
+  } catch (err) {
+    console.error(`[assessmentDao] 从数据库获取测评ID ${assessmentId} 的题目失败:`, err); // 添加详细日志
+    throw err; // 重新抛出错误
+  }
 };
 
 /**
