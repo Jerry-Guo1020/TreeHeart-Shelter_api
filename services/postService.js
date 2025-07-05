@@ -1,4 +1,5 @@
 const mysql = require('../db/mysql57');
+const likeDao = require('../dao/likeDao'); // 引入 likeDao
 
 async function createPost(uid, title, content, typeName, images) {
   try {
@@ -36,7 +37,7 @@ async function createPost(uid, title, content, typeName, images) {
 }
 
 // 新增获取帖子详情的函数
-async function getPostDetail(postId) {
+async function getPostDetail(postId, currentUserId = null) { // 增加 currentUserId 参数
   try {
     const postRows = await mysql.sqlExec(`
       SELECT
@@ -67,11 +68,46 @@ async function getPostDetail(postId) {
     if (postRows.length === 0) {
       return { success: false, msg: '帖子不存在' };
     }
-    return { success: true, data: postRows[0] };
+
+    const post = postRows[0];
+    // 查询当前用户是否已点赞该帖子
+    if (currentUserId) {
+      post.isLiked = await likeDao.checkIfPostLiked(postId, currentUserId);
+    } else {
+      post.isLiked = false; // 未登录或未提供用户ID，则默认为未点赞
+    }
+
+    return { success: true, data: post };
   } catch (err) {
     console.error('postService.getPostDetail错误:', err);
     return { success: false, msg: '服务器错误' };
   }
 }
 
-module.exports = { createPost, getPostDetail }; // 导出 getPostDetail
+/**
+ * 切换帖子点赞状态
+ * @param {number} postId 帖子ID
+ * @param {number} uid 用户ID
+ * @returns {Object} 响应
+ */
+async function togglePostLike(postId, uid) {
+  try {
+    const isLiked = await likeDao.checkIfPostLiked(postId, uid);
+    if (isLiked) {
+      // 已点赞，则取消点赞
+      await likeDao.removePostLike(postId, uid);
+      await likeDao.updatePostLikeCount(postId, -1);
+      return { success: true, action: 'unliked' };
+    } else {
+      // 未点赞，则添加点赞
+      await likeDao.addPostLike(postId, uid);
+      await likeDao.updatePostLikeCount(postId, 1);
+      return { success: true, action: 'liked' };
+    }
+  } catch (err) {
+    console.error('postService.togglePostLike 错误:', err);
+    return { success: false, msg: '服务器内部错误' };
+  }
+}
+
+module.exports = { createPost, getPostDetail, togglePostLike }; // 导出 getPostDetail 和 togglePostLike

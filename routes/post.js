@@ -85,7 +85,9 @@ router.get('/detail', async (req, res) => {
   }
 
   try {
-    const result = await postService.getPostDetail(postId);
+    // 实际项目中，用户ID应从认证信息中获取，例如 req.user.id
+    const currentUserId = req.user ? req.user.id : null; // 如果用户未登录，则为null
+    const result = await postService.getPostDetail(postId, currentUserId); // 传递用户ID
     if (result.success) {
       res.json({ code: 200, data: result.data, msg: '获取帖子详情成功' });
     } else {
@@ -94,6 +96,29 @@ router.get('/detail', async (req, res) => {
   } catch (err) {
     console.error('获取帖子详情失败:', err);
     res.status(500).json({ code: 500, msg: '获取帖子详情失败', data: null });
+  }
+});
+
+// 帖子点赞/取消点赞接口
+router.post('/like', async (req, res) => {
+  const { postId } = req.body;
+  // 实际项目中，用户ID应从认证信息中获取，例如 req.user.id
+  const uid = req.user ? req.user.id : 1; // 假设用户ID为1，请根据实际情况修改
+
+  if (!postId) {
+    return res.status(400).json({ code: 400, msg: '帖子ID不能为空' });
+  }
+
+  try {
+    const result = await postService.togglePostLike(postId, uid);
+    if (result.success) {
+      res.json({ code: 200, msg: result.action === 'liked' ? '点赞成功' : '取消点赞成功' });
+    } else {
+      res.status(500).json({ code: 500, msg: result.msg || '操作失败' });
+    }
+  } catch (err) {
+    console.error('帖子点赞/取消点赞失败:', err);
+    res.status(500).json({ code: 500, msg: '服务器内部错误' });
   }
 });
 

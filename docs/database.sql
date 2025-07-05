@@ -2,6 +2,9 @@
 CREATE DATABASE IF NOT EXISTS Tree DEFAULT CHARACTER SET 'utf8mb4';
 USE Tree;
 
+-- 如果需要清空并重新创建数据库，请取消注释下一行
+-- DROP DATABASE IF EXISTS Tree;
+
 -- 1、用户类型表，区分普通用户和管理员
 CREATE TABLE UserType (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,                                  -- 用户类型id
@@ -13,7 +16,7 @@ CREATE TABLE UserType (
 CREATE TABLE User (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,                                                   -- 用户id
     userTypeId BIGINT NOT NULL,                                                             -- 用户类型的id
-    openid VARCHAR(255) NOT NULL UNIQUE,                                                    -- 微信openid
+    openid VARCHAR(255) UNIQUE,                                                             -- 微信openid，可以为空，但如果存在则唯一
     nickname VARCHAR(50) NOT NULL,                                                          -- 用户昵称
     avatar VARCHAR(255) NOT NULL,                                                           -- 用户头像
     username VARCHAR(30) NOT NULL DEFAULT '树洞用户',                                        -- 用户名，默认值
@@ -35,8 +38,7 @@ CREATE TABLE UserFollow (
     followerId BIGINT NOT NULL,                                                             -- 关注者用户的id
     followedId BIGINT NOT NULL,                                                             -- 被关注者用户id
     createTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,                                 -- 关注时间
-    INDEX idx_followerId (followerId),                                                      -- 索引
-    INDEX idx_followedId (followedId),                                                      -- 索引
+    UNIQUE KEY unique_follow (followerId, followedId),                                      -- 联合唯一索引，防止重复关注
     FOREIGN KEY (followerId) REFERENCES User(id) ON DELETE CASCADE,                         -- 外键：关注者
     FOREIGN KEY (followedId) REFERENCES User(id) ON DELETE CASCADE                          -- 外键：被关注者
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -44,7 +46,7 @@ CREATE TABLE UserFollow (
 -- 4、帖子类型表
 CREATE TABLE PostType (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,                                                   -- 类型id
-    name VARCHAR(30) NOT NULL,                                                              -- 类型名称
+    name VARCHAR(30) NOT NULL UNIQUE,                                                       -- 类型名称
     INDEX idx_name (name)                                                                   -- 索引
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -52,7 +54,7 @@ CREATE TABLE PostType (
 CREATE TABLE PostImg (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,                                                   -- 图片id
     browser VARCHAR(100) NOT NULL,                                                          -- 存储桶名
-    uri VARCHAR(100),                                                                       -- 图片url
+    uri VARCHAR(255) NOT NULL,                                                              -- 图片url
     status ENUM('待上传', '上传中', '已完成') NOT NULL DEFAULT '待上传',                    -- 图片上传状态
     createTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,                                 -- 创建时间
     INDEX idx_status (status)                                                               -- 状态索引
@@ -75,47 +77,57 @@ CREATE TABLE Post (
     INDEX idx_imgId (imgId),                                                -- 图片索引
     FOREIGN KEY (uid) REFERENCES User(id) ON DELETE CASCADE,                -- 外键：用户
     FOREIGN KEY (typeId) REFERENCES PostType(id) ON DELETE CASCADE,         -- 外键：类型
-    FOREIGN KEY (imgId) REFERENCES PostImg(id) ON DELETE CASCADE            -- 外键：图片
+    FOREIGN KEY (imgId) REFERENCES PostImg(id) ON DELETE SET NULL           -- 外键：图片 (如果图片被删除，帖子imgId设为NULL)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 7、点赞表
-CREATE TABLE PostLike (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,                                   -- 点赞id
-    uid BIGINT NOT NULL,                                                    -- 用户id
-    postId BIGINT NOT NULL,                                                 -- 帖子id
-    createTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,                 -- 创建时间
-    INDEX idx_uid (uid),                                                    -- 用户索引
-    INDEX idx_postId (postId),                                              -- 帖子索引
-    FOREIGN KEY (uid) REFERENCES User(id) ON DELETE CASCADE,                -- 外键：用户
-    FOREIGN KEY (postId) REFERENCES Post(id) ON DELETE CASCADE              -- 外键：帖子
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- 8、评论表
-CREATE TABLE PostComment (
+-- 7、评论表 (新版本，包含点赞数和父评论ID)
+CREATE TABLE Comment (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,                                   -- 评论id
-    uid BIGINT NOT NULL,                                                    -- 用户id
     postId BIGINT NOT NULL,                                                 -- 帖子id
-    content VARCHAR(255) NOT NULL,                                          -- 评论内容
+    uid BIGINT NOT NULL,                                                    -- 评论者用户id
+    content TEXT NOT NULL,                                                  -- 评论内容
+    likes INT NOT NULL DEFAULT 0,                                           -- 点赞数量
+    parentCommentId BIGINT,                                                 -- 父评论id，用于回复，可为空
     createTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,                 -- 评论时间
-    INDEX idx_uid (uid),                                                    -- 用户索引
-    INDEX idx_postId (postId),                                              -- 帖子索引
-    FOREIGN KEY (uid) REFERENCES User(id) ON DELETE CASCADE,                -- 外键：用户
-    FOREIGN KEY (postId) REFERENCES Post(id) ON DELETE CASCADE              -- 外键：帖子
+    FOREIGN KEY (postId) REFERENCES Post(id) ON DELETE CASCADE,             -- 外键：关联帖子
+    FOREIGN KEY (uid) REFERENCES User(id) ON DELETE CASCADE,                -- 外键：关联用户
+    FOREIGN KEY (parentCommentId) REFERENCES Comment(id) ON DELETE CASCADE  -- 外键：关联父评论
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 9、收藏表
+-- 8、帖子点赞表 (新版本，包含唯一约束)
+CREATE TABLE PostLike (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,                                   -- 点赞记录id
+    postId BIGINT NOT NULL,                                                 -- 帖子id
+    uid BIGINT NOT NULL,                                                    -- 点赞用户id
+    createTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,                 -- 点赞时间
+    UNIQUE KEY unique_post_like (postId, uid),                              -- 联合唯一索引，防止重复点赞
+    FOREIGN KEY (postId) REFERENCES Post(id) ON DELETE CASCADE,             -- 外键：关联帖子
+    FOREIGN KEY (uid) REFERENCES User(id) ON DELETE CASCADE                 -- 外键：关联用户
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 9、评论点赞表 (新增)
+CREATE TABLE CommentLike (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,                                   -- 点赞记录id
+    commentId BIGINT NOT NULL,                                              -- 评论id
+    uid BIGINT NOT NULL,                                                    -- 点赞用户id
+    createTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,                 -- 点赞时间
+    UNIQUE KEY unique_comment_like (commentId, uid),                        -- 联合唯一索引，防止重复点赞
+    FOREIGN KEY (commentId) REFERENCES Comment(id) ON DELETE CASCADE,       -- 外键：关联评论
+    FOREIGN KEY (uid) REFERENCES User(id) ON DELETE CASCADE                 -- 外键：关联用户
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 10、收藏表 (原9，编号调整)
 CREATE TABLE PostCollect (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,                                  -- 收藏id
     uid BIGINT NOT NULL,                                                   -- 用户id
     postId BIGINT NOT NULL,                                                -- 帖子id
     createTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,                -- 创建时间
-    INDEX idx_uid (uid),                                                   -- 用户索引
-    INDEX idx_postId (postId),                                             -- 帖子索引
+    UNIQUE KEY unique_post_collect (postId, uid),                          -- 联合唯一索引，防止重复收藏
     FOREIGN KEY (uid) REFERENCES User(id) ON DELETE CASCADE,               -- 外键：用户
     FOREIGN KEY (postId) REFERENCES Post(id) ON DELETE CASCADE             -- 外键：帖子
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 10、活动表
+-- 11、活动表 (原10，编号调整)
 CREATE TABLE Activity (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,                                  -- 活动id
     uid BIGINT NOT NULL,                                                   -- 用户id（发布者）
@@ -123,33 +135,30 @@ CREATE TABLE Activity (
     content TEXT NOT NULL,                                                 -- 活动内容
     imgId BIGINT,                                                          -- 活动配图id
     createTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,                -- 创建时间
-    INDEX idx_uid (uid),                                                   -- 用户索引
-    INDEX idx_imgId (imgId),                                               -- 图片索引
     FOREIGN KEY (uid) REFERENCES User(id) ON DELETE CASCADE,               -- 外键：用户
-    FOREIGN KEY (imgId) REFERENCES PostImg(id) ON DELETE CASCADE           -- 外键：图片
+    FOREIGN KEY (imgId) REFERENCES PostImg(id) ON DELETE SET NULL          -- 外键：图片 (如果图片被删除，活动imgId设为NULL)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 11、活动报名表
+-- 12、活动报名表 (原11，编号调整)
 CREATE TABLE ActivityJoin (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,                                  -- 报名记录id
     uid BIGINT NOT NULL,                                                   -- 用户id
     activityId BIGINT NOT NULL,                                            -- 活动id
     createTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,                -- 创建时间
-    INDEX idx_uid (uid),                                                   -- 用户索引
-    INDEX idx_activityId (activityId),                                     -- 活动索引
+    UNIQUE KEY unique_activity_join (activityId, uid),                     -- 联合唯一索引，防止重复报名
     FOREIGN KEY (uid) REFERENCES User(id) ON DELETE CASCADE,               -- 外键：用户
     FOREIGN KEY (activityId) REFERENCES Activity(id) ON DELETE CASCADE     -- 外键：活动
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 12、心理测评类型/卷表
+-- 13、心理测评类型/卷表 (原12，编号调整)
 CREATE TABLE Assessment (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,                                  -- 测评卷id
-    name VARCHAR(100) NOT NULL,                                            -- 测评类型名称
+    name VARCHAR(100) NOT NULL UNIQUE,                                     -- 测评类型名称
     description TEXT,                                                      -- 测评简介
     createTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP                 -- 创建时间
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 13、测评题库表（选项按顺序，分数由后端判定）
+-- 14、测评题库表（选项按顺序，分数由后端判定） (原13，编号调整)
 CREATE TABLE AssessmentQuestion (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,                                  -- 题目id
     assessmentId BIGINT NOT NULL,                                          -- 所属测评卷id
@@ -159,7 +168,7 @@ CREATE TABLE AssessmentQuestion (
     FOREIGN KEY (assessmentId) REFERENCES Assessment(id) ON DELETE CASCADE -- 外键：所属测评卷
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 14、评分区间规则表
+-- 15、评分区间规则表 (原14，编号调整)
 CREATE TABLE AssessmentRule (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,                                  -- 规则id
     assessmentId BIGINT NOT NULL,                                          -- 测评卷id
@@ -170,7 +179,7 @@ CREATE TABLE AssessmentRule (
     FOREIGN KEY (assessmentId) REFERENCES Assessment(id) ON DELETE CASCADE -- 外键：所属测评卷
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 15、用户测评历史记录表
+-- 16、用户测评历史记录表 (原15，编号调整)
 CREATE TABLE UserAssessmentRecord (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,                                  -- 用户测评记录id
     uid BIGINT NOT NULL,                                                   -- 用户id
@@ -183,6 +192,6 @@ CREATE TABLE UserAssessmentRecord (
     FOREIGN KEY (assessmentId) REFERENCES Assessment(id) ON DELETE CASCADE -- 外键：测评卷
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 16、初始化用户类型和帖子类型
-INSERT INTO UserType(name) VALUES ('admin'), ('user');                    -- 初始化用户类型
-INSERT INTO PostType(name) VALUES ('学业压力'), ('情绪情感'), ('人际交往'), ('职业规划'), ('生活适应'), ('其他类型'); -- 初始化帖子类型
+-- 17、初始化用户类型和帖子类型 (原16，编号调整)
+INSERT INTO UserType(name) VALUES ('admin'), ('user') ON DUPLICATE KEY UPDATE name=name;
+INSERT INTO PostType(name) VALUES ('学业压力'), ('情绪情感'), ('人际交往'), ('职业规划'), ('生活适应'), ('其他类型') ON DUPLICATE KEY UPDATE name=name;
