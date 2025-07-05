@@ -36,9 +36,10 @@ exports.getQuestionsByAssessmentId = async (assessmentId) => {
     // 假设你的题目表名为 'assessment_questions'
     // 并且题目与测评通过 'assessment_id' 关联
     const sql = `SELECT * FROM assessment_questions WHERE assessment_id = ? ORDER BY question_order ASC`;
-    const [rows] = await db.query(sql, [assessmentId]); // 假设 db.query 返回一个数组，第一个元素是结果行
+    // 将 db.query 替换为 mysql.sqlExec
+    const rows = await mysql.sqlExec(sql, [assessmentId]); // mysql.sqlExec 通常直接返回结果数组，不需要解构赋值
 
-    if (rows.length > 0) {
+    if (rows && rows.length > 0) { // 检查 rows 是否存在且有数据
       return rows;
     }
     return null;
