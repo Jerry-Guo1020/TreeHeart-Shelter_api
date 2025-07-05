@@ -30,20 +30,26 @@ exports.getQuestionsByAssessmentId = async (assessmentId) => {
   try {
     const sql = `SELECT * FROM AssessmentQuestion WHERE assessmentId = ? ORDER BY id ASC`;
     const rows = await mysql.sqlExec(sql, [assessmentId]);
-    console.log(`[assessmentDao] 查询测评ID ${assessmentId} 的题目结果:`, rows);
+    console.log(`[assessmentDao] 查询测评ID ${assessmentId} 的题目结果 (原始数据):`, rows); // 打印原始数据
 
     if (rows && rows.length > 0) {
       // 对每个题目的 options 字段进行 JSON 解析
       const parsedRows = rows.map(item => {
         try {
+          // 确保 item.options 是字符串类型，以防万一
+          const optionsString = String(item.options);
           return {
             ...item,
-            options: JSON.parse(item.options)
+            options: JSON.parse(optionsString)
           };
         } catch (e) {
-          console.error(`解析题目ID ${item.id} 的 options 字段失败:`, e);
-          // 如果解析失败，保持原字符串
-          return item;
+          console.error(`[assessmentDao] 解析题目ID ${item.id} 的 options 字段失败。原始 options 值: "${item.options}"`, e);
+          // 如果解析失败，为了不中断程序，可以返回一个空数组或者原始字符串，取决于前端如何处理
+          // 这里我们返回一个空数组，表示选项解析失败
+          return {
+            ...item,
+            options: [] // 或者 item.options，如果前端能处理非JSON字符串
+          };
         }
       });
       return parsedRows;
