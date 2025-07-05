@@ -22,30 +22,22 @@ exports.getAssessmentById = async (assessmentId) => {
 };
 
 /**
- * 根据测评ID获取所有题目
- * @param {number} assessmentId 测评ID
- * @returns {Array} 题目列表
- */
-/**
  * 根据测评ID从数据库获取题目列表
  * @param {number} assessmentId 测评ID
  * @returns {Promise<Array|null>} 题目列表或null
  */
 exports.getQuestionsByAssessmentId = async (assessmentId) => {
   try {
-    // 假设你的题目表名为 'assessment_questions'
-    // 并且题目与测评通过 'assessment_id' 关联
-    const sql = `SELECT * FROM assessment_questions WHERE assessment_id = ? ORDER BY question_order ASC`;
-    // 将 db.query 替换为 mysql.sqlExec
-    const rows = await mysql.sqlExec(sql, [assessmentId]); // mysql.sqlExec 通常直接返回结果数组，不需要解构赋值
-
-    if (rows && rows.length > 0) { // 检查 rows 是否存在且有数据
+    // 修正表名和字段名
+    const sql = `SELECT * FROM AssessmentQuestion WHERE assessmentId = ? ORDER BY id ASC`;
+    const rows = await mysql.sqlExec(sql, [assessmentId]);
+    if (rows && rows.length > 0) {
       return rows;
     }
     return null;
   } catch (err) {
-    console.error(`[assessmentDao] 从数据库获取测评ID ${assessmentId} 的题目失败:`, err); // 添加详细日志
-    throw err; // 重新抛出错误
+    console.error(`[assessmentDao] 从数据库获取测评ID ${assessmentId} 的题目失败:`, err);
+    throw err;
   }
 };
 
