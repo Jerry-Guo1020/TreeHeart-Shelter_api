@@ -28,9 +28,9 @@ exports.getAssessmentById = async (assessmentId) => {
  */
 exports.getQuestionsByAssessmentId = async (assessmentId) => {
   try {
-    // 修正表名和字段名
     const sql = `SELECT * FROM AssessmentQuestion WHERE assessmentId = ? ORDER BY id ASC`;
     const rows = await mysql.sqlExec(sql, [assessmentId]);
+    console.log(`[assessmentDao] 查询测评ID ${assessmentId} 的题目结果:`, rows); // 新增日志
     if (rows && rows.length > 0) {
       return rows;
     }
