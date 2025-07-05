@@ -20,8 +20,8 @@ const userRouter = require('./routes/user'); // 导入用户路由
 app.use('/user', userRouter); // 挂载用户路由
 
 // 心理测评路由
-const assessmentRouter = require('./routes/assessment'); // 导入测评路由
-app.use('/assessment', assessmentRouter); // 挂载测评路由
+const assessmentRoutes = require('./routes/assessment'); // 引入路由
+app.use('/assessment', assessmentRoutes); // <-- 确保这里是 '/assessment'
 
 // 帖子路由
 const postRouter = require('./routes/post');
