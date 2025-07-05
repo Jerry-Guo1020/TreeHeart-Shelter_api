@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const mysql = require('../db/mysql57'); // 确保路径正确
+const postService = require('../services/postService'); // 导入 postService
 
 // 发布帖子接口
 router.post('/create', async (req, res) => {
@@ -73,6 +74,26 @@ router.get('/list', async (req, res) => {
   } catch (err) {
     console.error('获取帖子列表失败:', err);
     res.status(500).json({ code: 500, msg: '获取帖子列表失败', data: null });
+  }
+});
+
+// 获取帖子详情接口
+router.get('/detail', async (req, res) => {
+  const postId = req.query.id;
+  if (!postId) {
+    return res.status(400).json({ code: 400, msg: '帖子ID不能为空' });
+  }
+
+  try {
+    const result = await postService.getPostDetail(postId);
+    if (result.success) {
+      res.json({ code: 200, data: result.data, msg: '获取帖子详情成功' });
+    } else {
+      res.status(404).json({ code: 404, msg: result.msg });
+    }
+  } catch (err) {
+    console.error('获取帖子详情失败:', err);
+    res.status(500).json({ code: 500, msg: '获取帖子详情失败', data: null });
   }
 });
 

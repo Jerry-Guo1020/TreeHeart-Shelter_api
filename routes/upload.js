@@ -43,8 +43,8 @@ router.post('/image', upload.single('file'), async (req, res) => { // 将路由�
       [BUCKET, objectName, '已完成']
     );
     const imgId = result.insertId;
-    // 这里的 URL 是直接访问 Minio 的地址
-    const url = `http://43.142.21.211:59001/${BUCKET}/${objectName}`; // 确保这个 IP 和端口是 Minio 的公共访问地址
+    // 将 Minio 的直接访问 URL 改为 Nginx 代理的公共 URL
+    const url = `http://43.142.21.211/minio-public/${BUCKET}/${objectName}`; // <-- 修改这里
     res.json({ code: 200, msg: '上传成功', data: { url, imgId } });
 
   } catch (e) {

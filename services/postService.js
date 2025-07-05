@@ -35,4 +35,43 @@ async function createPost(uid, title, content, typeName, images) {
   }
 }
 
-module.exports = { createPost };
+// 新增获取帖子详情的函数
+async function getPostDetail(postId) {
+  try {
+    const postRows = await mysql.sqlExec(`
+      SELECT
+          p.id,
+          p.uid,
+          u.nickname,
+          u.avatar,
+          pt.name AS typeName,
+          p.title,
+          p.content,
+          pi.uri AS imgUrl,
+          p.likeCount,
+          p.commentCount,
+          p.collectCount,
+          p.createTime
+      FROM
+          Post p
+      JOIN
+          User u ON p.uid = u.id
+      JOIN
+          PostType pt ON p.typeId = pt.id
+      LEFT JOIN
+          PostImg pi ON p.imgId = pi.id
+      WHERE
+          p.id = ?
+    `, [postId]);
+
+    if (postRows.length === 0) {
+      return { success: false, msg: '帖子不存在' };
+    }
+    return { success: true, data: postRows[0] };
+  } catch (err) {
+    console.error('postService.getPostDetail错误:', err);
+    return { success: false, msg: '服务器错误' };
+  }
+}
+
+module.exports = { createPost, getPostDetail }; // 导出 getPostDetail
