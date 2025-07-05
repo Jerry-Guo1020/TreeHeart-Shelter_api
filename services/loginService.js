@@ -1,6 +1,7 @@
 const loginDao = require('../dao/loginDao');
 // const { getOpenidByCode } = require('../utils/wechat'); // 如果不再使用微信登录，可以移除此行
 const { signJwtToken } = require('../utils/jwt');
+const { generateRandomName, generateRandomAvatar } = require('../utils/randomData'); // 假设你有这些工具函数
 
 // {{ edit_1 }}
 // 游客登录逻辑
@@ -96,5 +97,31 @@ exports.wechatLogin = async (wxLogin) => {
   } catch (err) {
     console.error('loginService.wechatLogin错误:', err);
     return { code: 500, msg: "微信登录失败", data: null };
+  }
+};
+
+/**
+ * 根据用户ID获取用户信息
+ * @param {number} id 用户ID
+ * @returns {Promise<Object|null>} 用户对象或null
+ */
+exports.getUserById = async (id) => {
+  try {
+    const user = await loginDao.getUserById(id);
+    // 可以在这里对用户数据进行一些处理，例如移除敏感信息
+    if (user) {
+      // 假设你希望返回的字段
+      return {
+        id: user.id,
+        nickname: user.nickname,
+        avatar: user.avatar,
+        isNewUser: user.isNewUser,
+        // ... 其他你希望返回的字段
+      };
+    }
+    return null;
+  } catch (err) {
+    console.error('loginService.getUserById 错误:', err);
+    throw err;
   }
 };

@@ -25,6 +25,27 @@ router.post('/guest-login', async (req, res) => {
   }
 });
 
-router.get('/user/current', loginService.getCurrentUser);
+// 获取当前用户信息
+router.get('/user/current', async (req, res) => {
+  try {
+    // 假设你通过 JWT token 获取用户ID，或者从 session 中获取
+    // 这里需要根据你的认证机制来获取用户ID
+    const userId = req.user ? req.user.id : null; // 示例：如果使用 JWT，req.user 会被中间件填充
+
+    if (!userId) {
+      return res.status(401).json({ code: 401, msg: '未授权或用户ID缺失' });
+    }
+
+    const user = await loginService.getUserById(userId); // 调用 loginService 中的方法
+    if (user) {
+      res.json({ code: 200, msg: '获取用户信息成功', data: user });
+    } else {
+      res.status(404).json({ code: 404, msg: '用户不存在' });
+    }
+  } catch (error) {
+    console.error('获取当前用户信息失败:', error);
+    res.status(500).json({ code: 500, msg: '服务器内部错误' });
+  }
+});
 
 module.exports = router;
