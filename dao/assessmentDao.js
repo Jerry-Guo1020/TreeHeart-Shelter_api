@@ -1,5 +1,5 @@
 const mysql = require('../db/mysql57');
-const db = require('../utils/db'); // 假设你有一个数据库连接工具
+// const db = require('../utils/db'); // 移除这一行，因为它没有被使用，且可能引起混淆
 
 /**
  * 获取所有测评列表
@@ -30,13 +30,13 @@ exports.getQuestionsByAssessmentId = async (assessmentId) => {
   try {
     const sql = `SELECT * FROM AssessmentQuestion WHERE assessmentId = ? ORDER BY id ASC`;
     const rows = await mysql.sqlExec(sql, [assessmentId]);
-    console.log(`[assessmentDao] 查询测评ID ${assessmentId} 的题目结果:`, rows); // 新增日志
+    console.log(`[assessmentDao] 查询测评ID ${assessmentId} 的题目结果:`, rows);
     if (rows && rows.length > 0) {
       return rows;
     }
     return null;
   } catch (err) {
-    console.error(`[assessmentDao] 从数据库获取测评ID ${assessmentId} 的题目失败:`, err);
+    console.error(`[assessmentDao] 从数据库获取测评ID ${assessmentId} 的题目失败:`, err); // 确保这里打印完整的错误对象
     throw err;
   }
 };
