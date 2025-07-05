@@ -3,7 +3,7 @@ CREATE DATABASE IF NOT EXISTS Tree DEFAULT CHARACTER SET 'utf8mb4';
 USE Tree;
 
 -- 如果需要清空并重新创建数据库，请取消注释下一行
--- DROP DATABASE IF EXISTS Tree;
+DROP DATABASE IF EXISTS Tree;
 
 -- 1、用户类型表，区分普通用户和管理员
 CREATE TABLE UserType (

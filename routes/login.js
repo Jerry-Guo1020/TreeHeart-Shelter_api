@@ -25,4 +25,6 @@ router.post('/guest-login', async (req, res) => {
   }
 });
 
+router.get('/user/current', loginService.getCurrentUser);
+
 module.exports = router;
