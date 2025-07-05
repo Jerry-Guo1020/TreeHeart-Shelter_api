@@ -31,12 +31,26 @@ exports.getQuestionsByAssessmentId = async (assessmentId) => {
     const sql = `SELECT * FROM AssessmentQuestion WHERE assessmentId = ? ORDER BY id ASC`;
     const rows = await mysql.sqlExec(sql, [assessmentId]);
     console.log(`[assessmentDao] 查询测评ID ${assessmentId} 的题目结果:`, rows);
+
     if (rows && rows.length > 0) {
-      return rows;
+      // 对每个题目的 options 字段进行 JSON 解析
+      const parsedRows = rows.map(item => {
+        try {
+          return {
+            ...item,
+            options: JSON.parse(item.options)
+          };
+        } catch (e) {
+          console.error(`解析题目ID ${item.id} 的 options 字段失败:`, e);
+          // 如果解析失败，保持原字符串
+          return item;
+        }
+      });
+      return parsedRows;
     }
     return null;
   } catch (err) {
-    console.error(`[assessmentDao] 从数据库获取测评ID ${assessmentId} 的题目失败:`, err); // 确保这里打印完整的错误对象
+    console.error(`[assessmentDao] 从数据库获取测评ID ${assessmentId} 的题目失败:`, err);
     throw err;
   }
 };
