@@ -12,8 +12,8 @@ console.log('Serving static files from:', path.join(__dirname, "public"));
 app.use("/static", express.static(path.join(__dirname, "public")));
 
 // 登录的路由
-const loginRouter = require('./routes/login'); // 路径根据你实际项目
-app.use('/login', loginRouter);
+const loginRouter = require('./routes/login'); // 引入 login 路由文件
+app.use('/login', loginRouter); // 将 loginRouter 挂载到 /login 路径下
 
 // 用户管理
 const userRouter = require('./routes/user'); // 导入用户路由
