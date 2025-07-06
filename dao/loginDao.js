@@ -1,6 +1,5 @@
 const mysql = require('../db/mysql57');
 
-// {{ edit_1 }}
 // 根据昵称查询用户
 exports.getUserByNickname = async (nickname) => {
   try {
@@ -67,4 +66,40 @@ exports.addUser = async (user) => {
     console.error('loginDao.addUser 错误:', err);
     throw err;
   }
+};
+
+/**
+ * 更新用户信息
+ * @param {number} userId 用户ID
+ * @param {object} userData 包含要更新的用户信息的对象
+ */
+async function updateUser(userId, userData) {
+  let sql = 'UPDATE User SET ';
+  const params = [];
+  const updates = [];
+
+  for (const key in userData) {
+    if (userData.hasOwnProperty(key)) {
+      updates.push(`${key} = ?`);
+      params.push(userData[key]);
+    }
+  }
+
+  if (updates.length === 0) {
+    return { affectedRows: 0 }; // 没有要更新的数据
+  }
+
+  sql += updates.join(', ') + ' WHERE id = ?';
+  params.push(userId);
+
+  const result = await mysql.sqlExec(sql, params); // 将 sqlExec 改为 mysql.sqlExec
+  return result; // 返回数据库操作结果，例如 { affectedRows: 1 }
+}
+
+module.exports = {
+  getUserByNickname: exports.getUserByNickname,
+  getUserById: exports.getUserById,
+  getUserByOpenid: exports.getUserByOpenid,
+  addUser: exports.addUser,
+  updateUser: updateUser, // 确保 updateUser 也被导出
 };

@@ -159,3 +159,29 @@ exports.getUserById = async (id) => {
     throw err;
   }
 };
+
+/**
+ * 更新用户信息
+ * @param {number} userId 用户ID
+ * @param {object} userData 包含要更新的用户信息的对象
+ */
+async function updateUserInfo(userId, userData) {
+  try {
+    // 假设 loginDao 中有一个 updateUser 方法来执行数据库更新
+    const result = await loginDao.updateUser(userId, userData); 
+    if (result.affectedRows > 0) {
+      // 更新成功后，可以重新获取最新的用户信息返回给前端
+      const updatedUser = await loginDao.getUserById(userId);
+      return new Response(200, '用户信息更新成功', updatedUser);
+    } else {
+      return new Response(400, '用户信息更新失败或无变化');
+    }
+  } catch (error) {
+    console.error('更新用户信息服务错误:', error);
+    return new Response(500, '服务器内部错误');
+  }
+}
+
+module.exports = {
+  updateUserInfo,
+};
