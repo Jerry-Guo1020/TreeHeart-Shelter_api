@@ -3,6 +3,7 @@ const { getOpenidByCode } = require('../utils/wechat'); // 确保这里没有被
 const { signJwtToken } = require('../utils/jwt');
 const { generateRandomName, generateRandomAvatar } = require('../utils/randomData'); // 假设你有这些工具函数
 const Response = require('../entity/http/Response'); // 引入 Response 实体类
+const { v4: uuidv4 } = require('uuid'); // 导入 uuid 包用于生成唯一ID
 
 // {{ edit_1 }}
 // 微信登录逻辑
@@ -74,39 +75,66 @@ exports.wechatLogin = async (loginData) => {
   }
 };
 
-// 游客登录逻辑 (保持不变，但请注意其与微信登录的区别)
+// 游客登录逻辑
 exports.guestLogin = async (userData) => {
   console.log('【loginService】进入 guestLogin 方法');
   console.log('接收到的用户数据:', userData);
 
   try {
-    const { nickname, avatar } = userData;
+    const { nickname, avatar, openid } = userData; // 解构出 openid
 
-    // 1. 根据昵称查询用户
-    let user = await loginDao.getUserByNickname(nickname);
-    console.log('【loginService】查询用户结果:', user ? '已存在' : '不存在');
+    let user;
+    let isNewUserFlagForResponse = 0; // 用于响应的 isNewUser 标志
+
+    if (openid) {
+      // 如果前端提供了 openid，优先通过 openid 查找用户
+      user = await loginDao.getUserByOpenid(openid);
+      if (user) {
+        console.log('【loginService】通过 openid 找到用户:', user.id);
+        isNewUserFlagForResponse = user.isNewUser; // 使用数据库中的 isNewUser 标志
+
+        // 如果前端提供了新的昵称或头像，且与数据库中不同，则更新
+        const updateFields = {};
+        if (nickname && nickname !== user.nickname) {
+          updateFields.nickname = nickname;
+        }
+        if (avatar && avatar !== user.avatar) {
+          updateFields.avatar = avatar;
+        }
+
+        if (Object.keys(updateFields).length > 0) {
+          await loginDao.updateUser(user.id, updateFields);
+          user = await loginDao.getUserById(user.id); // 重新查询以获取更新后的用户信息
+          console.log('【loginService】更新了用户昵称/头像');
+        }
+      }
+    }
 
     if (!user) {
-      // 2. 如果用户不存在，则创建新用户
+      // 如果没有通过 openid 找到用户，或者 openid 未提供，则创建新用户
+      isNewUserFlagForResponse = 1; // 标记为本次登录创建了新用户
+
+      const newOpenid = openid || uuidv4(); // 如果没有提供 openid，则生成一个新的 UUID
+      const newNickname = nickname || generateRandomName(); // 如果没有提供昵称，则生成随机昵称
+      const newAvatar = avatar || generateRandomAvatar(); // 如果没有提供头像，则生成随机头像
+
       const newUser = {
-        nickname,
-        avatar,
+        openid: newOpenid,
+        nickname: newNickname,
+        avatar: newAvatar,
         userTypeId: 2, // 普通用户
-        username: nickname, // 假设 username 默认就是 nickname
-        sex: '男', // 默认值，如果前端没有提供
-        isNewUser: 1 // 标记为新用户
+        username: newNickname, // 假设 username 默认就是 nickname
+        sex: '未知', // 默认值，如果前端没有提供
+        isNewUser: 1 // 标记为新用户（数据库字段）
       };
-      console.log('【loginService】准备创建新用户:', newUser);
+      console.log('【loginService】准备创建新游客用户:', newUser);
       const newUserId = await loginDao.addUser(newUser);
       user = await loginDao.getUserById(newUserId); // 重新查询新创建的用户信息
-      console.log('【loginService】新用户创建成功，ID:', newUserId);
-    } else {
-      console.log('【loginService】用户已存在，直接登录');
-      // 如果用户已存在，你可能需要更新一些信息，或者直接返回
+      console.log('【loginService】新游客用户创建成功，ID:', newUserId);
     }
 
     // 3. 生成 JWT token
-    const token = signJwtToken({ uid: user.id, nickname: user.nickname });
+    const token = signJwtToken({ uid: user.id, openid: user.openid, nickname: user.nickname });
     console.log('【loginService】生成 token 成功');
 
     return {
@@ -116,6 +144,7 @@ exports.guestLogin = async (userData) => {
         token,
         user: {
           id: user.id,
+          openid: user.openid, // 确保返回 openid
           nickname: user.nickname,
           avatar: user.avatar,
           sex: user.sex,
@@ -123,7 +152,7 @@ exports.guestLogin = async (userData) => {
           college: user.college,
           subCollege: user.subCollege,
           major: user.major,
-          isNewUser: user.isNewUser,
+          isNewUser: isNewUserFlagForResponse, // 返回正确的 isNewUser 标志
           createTime: user.createTime
         }
       }
