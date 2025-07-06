@@ -1,28 +1,45 @@
 const loginDao = require('../dao/loginDao');
-// const { getOpenidByCode } = require('../utils/wechat'); // 如果不再使用微信登录，可以移除此行
+// const { getOpenidByCode } = require('../utils/wechat'); // 不再需要微信登录，可以注释或删除
 const { signJwtToken } = require('../utils/jwt');
+const { generateRandomName, generateRandomAvatar } = require('../utils/randomData');
+const Response = require('../entity/http/Response');
+const { v4: uuidv4 } = require('uuid'); // 引入 uuid 库
 
-// {{ edit_1 }}
-// 游客登录逻辑
+// 移除 wechatLogin 方法，因为不再需要微信登录检测
+
+// 游客登录逻辑 (现在用于设备ID登录，重用 openid 字段)
 exports.guestLogin = async (userData) => {
   console.log('【loginService】进入 guestLogin 方法');
-  console.log('接收到的用户数据:', userData);
-
+  const response = new Response();
   try {
-    const { nickname, avatar } = userData;
+    let { deviceId, nickname, avatar } = userData; // deviceId 现在是输入参数
 
-    // 1. 根据昵称查询用户
-    let user = await loginDao.getUserByNickname(nickname);
-    console.log('【loginService】查询用户结果:', user ? '已存在' : '不存在');
+    let user = null;
+    if (deviceId) {
+      // 如果前端提供了 deviceId，尝试通过 loginDao.getUserByOpenid 查询用户
+      // 这里的 openid 字段实际上存储的是 deviceId
+      user = await loginDao.getUserByOpenid(deviceId);
+      console.log('【loginService】通过 deviceId (使用 openid 字段) 查询用户结果:', user ? '已存在' : '不存在');
+    }
 
     if (!user) {
-      // 2. 如果用户不存在，则创建新用户
+      // 如果没有提供 deviceId，或者通过 deviceId 没有找到用户，则认为是新设备/新用户
+      if (!deviceId) {
+        // 如果前端没有提供 deviceId，则后端生成一个新的 deviceId
+        deviceId = uuidv4();
+        console.log('【loginService】生成新的 deviceId:', deviceId);
+      }
+      // 如果没有提供昵称和头像，则生成随机的
+      nickname = nickname || generateRandomName();
+      avatar = avatar || generateRandomAvatar();
+
       const newUser = {
-        nickname,
-        avatar,
+        deviceId: deviceId, // 这个 deviceId 将被插入到 User 表的 openid 字段
+        nickname: nickname,
+        avatar: avatar,
         userTypeId: 2, // 普通用户
-        username: nickname, // 假设 username 默认就是 nickname
-        sex: '男', // 默认值，如果前端没有提供
+        username: nickname, // 默认用户名同昵称
+        sex: '男', // 默认值
         isNewUser: 1 // 标记为新用户
       };
       console.log('【loginService】准备创建新用户:', newUser);
@@ -31,70 +48,31 @@ exports.guestLogin = async (userData) => {
       console.log('【loginService】新用户创建成功，ID:', newUserId);
     } else {
       console.log('【loginService】用户已存在，直接登录');
-      // 如果用户已存在，你可能需要更新一些信息，或者直接返回
+      // 如果用户已存在，可以根据需要更新其昵称、头像等信息
     }
 
-    // 3. 生成 JWT token
-    const token = signJwtToken({ uid: user.id, nickname: user.nickname });
+    // 生成 JWT token，包含 uid 和 deviceId (从 user.openid 中获取，因为它是 deviceId)
+    const token = signJwtToken({ uid: user.id, deviceId: user.openid, nickname: user.nickname });
     console.log('【loginService】生成 token 成功');
 
-    return {
-      code: 200,
-      msg: "登录成功",
-      data: {
-        token,
-        user: {
-          id: user.id,
-          nickname: user.nickname,
-          avatar: user.avatar,
-          sex: user.sex,
-          grade: user.grade,
-          college: user.college,
-          subCollege: user.subCollege,
-          major: user.major,
-          isNewUser: user.isNewUser,
-          createTime: user.createTime
-        }
+    return response.ok({
+      token,
+      user: {
+        id: user.id,
+        deviceId: user.openid, // 返回 deviceId 给前端，从 user.openid 中获取
+        nickname: user.nickname,
+        avatar: user.avatar,
+        sex: user.sex,
+        grade: user.grade,
+        college: user.college,
+        subCollege: user.subCollege,
+        major: user.major,
+        isNewUser: user.isNewUser,
+        createTime: user.createTime
       }
-    };
+    });
   } catch (err) {
     console.error('【loginService】guestLogin 错误:', err);
-    return { code: 500, msg: "登录失败", data: null };
-  }
-};
-
-// 原有的 wechatLogin 如果不再使用，可以删除或注释掉
-exports.wechatLogin = async (wxLogin) => {
-  try {
-    const { code, userInfo } = wxLogin;
-    // const openid = await getOpenidByCode(code); // 如果移除了 getOpenidByCode，这里会报错
-    // if (!openid) {
-    //   return { code: 400, msg: "获取openid失败", data: null };
-    // }
-
-    // let user = await loginDao.getUserByOpenid(openid);
-
-    // if (!user) {
-    //   const newUser = {
-    //     openid,
-    //     nickname: userInfo.nickName,
-    //     avatar: userInfo.avatarUrl,
-    //     sex: userInfo.gender || null,
-    //     userTypeId: 2, // 普通用户
-    //   };
-    //   await loginDao.addUser(newUser);
-    //   user = await loginDao.getUserByOpenid(openid);
-    // }
-
-    // const token = signJwtToken({ uid: user.id, openid: user.openid });
-
-    return {
-      code: 501, // 假设不再支持微信登录，返回一个未实现的状态码
-      msg: "微信登录功能已禁用",
-      data: null
-    };
-  } catch (err) {
-    console.error('loginService.wechatLogin错误:', err);
-    return { code: 500, msg: "微信登录失败", data: null };
+    return response.fail(500, "登录失败");
   }
 };
