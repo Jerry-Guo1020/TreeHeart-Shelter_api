@@ -1,4 +1,4 @@
-const loginDao = require('../dao/loginDao'); // 复用 loginDao 来进行用户数据库操作
+const loginDao = require('./dao/loginDao'); // 复用 loginDao 来进行用户数据库操作
 const Response = require('../entity/http/Response'); // 导入 Response 工具类，请确保此路径正确
 
 // 更新用户信息

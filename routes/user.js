@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const loginDao = require('../dao/loginDao');
+const loginDao = require('./dao/loginDao');
 
 // 假设你有 JWT 中间件，解析 req.user.id
 router.get('/current', async (req, res) => {
