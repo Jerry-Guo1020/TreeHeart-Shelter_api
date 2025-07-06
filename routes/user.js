@@ -7,14 +7,19 @@ const { checkJWTMiddleware } = require('../middleware/auth'); // 假设你有 JW
 // 假设你有 JWT 中间件，解析 req.user.id
 router.get('/current', checkJWTMiddleware, async (req, res) => { // 建议添加 JWT 中间件
   try {
-    // 生产环境应从认证中间件获取用户ID
+    console.log('【GET /current】req.user:', req.user); // 添加日志
     const userId = req.user ? req.user.id : 1; // 开发阶段可用1
+    console.log('【GET /current】Resolved userId:', userId); // 添加日志
+
     const user = await loginDao.getUserById(userId);
+    console.log('【GET /current】Fetched user from DB:', user); // 添加日志
+
     if (!user) {
       return res.status(404).json({ code: 404, msg: '用户不存在' });
     }
     res.json({ code: 200, data: user });
   } catch (err) {
+    console.error('【GET /current】服务器错误:', err); // 改进错误日志
     res.status(500).json({ code: 500, msg: '服务器错误' });
   }
 });
