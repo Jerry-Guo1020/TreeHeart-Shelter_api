@@ -76,15 +76,12 @@ exports.wechatLogin = async (loginData) => {
 };
 
 // 游客登录逻辑
-exports.guestLogin = async (userData) => {
+exports.guestLogin = async ({ nickname, avatar }) => {
   console.log('【loginService】进入 guestLogin 方法');
   console.log('接收到的用户数据:', userData);
 
   try {
-    const { nickname, avatar, openid } = userData; // 解构出 openid
-
-    let user;
-    let isNewUserFlagForResponse = 0; // 用于响应的 isNewUser 标志
+    
 
     if (openid) {
       // 如果前端提供了 openid，优先通过 openid 查找用户
@@ -209,6 +206,25 @@ async function updateUserInfo(userId, userData) {
     console.error('更新用户信息服务错误:', error);
     return new Response(500, '服务器内部错误');
   }
+}
+
+exports.guestLogin = async () => {
+  const newNickname = generateRandomName();
+  const newAvatar = generateRandomAvatar();
+
+      return {
+      code: 200,
+      msg: "注册成功",
+      data: {
+        token,
+        user: {
+          id: user.id,
+          openid: user.openid, // 确保返回 openid
+          nickname: user.nickname,
+          avatar: user.avatar,
+        }
+      }
+    };
 }
 
 module.exports = {

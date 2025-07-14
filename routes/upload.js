@@ -1,50 +1,55 @@
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
 const { minioClient, BUCKET } = require('../utils/minioClient');
-const mysql = require('../db/mysql57');
-const fs = require('fs');
-const path = require('path');
+const axios = require('axios');
+const uuid = require('uuid').v4;
 
-// 确保 uploads 目录存在
-const uploadDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-const upload = multer({ dest: uploadDir });
+// apisql配置
+const APISQL_BASE_URL = 'https://open.apisql.cn/api/tree_api';
 
-router.post('/image', upload.single('file'), async (req, res) => {
-  let filePathToClean = null;
+// 1. 获取预签名上传URL（POST /upload/presign）
+router.post('/presign', async (req, res) => {
   try {
-    const file = req.file;
-    if (!file) return res.json({ code: 400, msg: '未选择文件' });
-
-    filePathToClean = file.path;
-    const objectName = Date.now() + '_' + file.originalname;
-
-    // 上传到 minio
-    await new Promise((resolve, reject) => {
-      minioClient.fPutObject(BUCKET, objectName, file.path, {}, (err, etag) => {
-        if (err) return reject(new Error('Minio 上传失败'));
-        resolve();
+    // 假设你前端传图片数量和图片扩展名列表
+    const { imgCount, extList = [] } = req.body;
+    if (!imgCount || imgCount <= 0) return res.json({ code: 400, msg: '图片数量错误' });
+    // 创建多张图片的预签名url和img记录
+    const communityImageList = [];
+    for (let i = 0; i < imgCount; i++) {
+      const ext = extList[i] || '.jpg';
+      const objectName = `${Date.now()}_${uuid()}${ext}`;
+      // 1. 创建mysql记录，status='待上传'
+      const resp = await axios.post(`${APISQL_BASE_URL}/insert/postimg`, {
+        params: {
+          browser: BUCKET,
+          uri: objectName,
+          status: '待上传'
+        }
       });
-    });
-
-    // 写入 MySQL
-    const result = await mysql.sqlExec(
-      'INSERT INTO PostImg (browser, uri, status) VALUES (?, ?, ?)',
-      [BUCKET, objectName, '已完成']
-    );
-    const imgId = result.insertId;
-    const url = `http://43.142.21.211/minio-public/${BUCKET}/${objectName}`;
-    res.json({ code: 200, msg: '上传成功', data: { url, imgId } });
-
-  } catch (e) {
-    res.status(500).json({ code: 500, msg: `服务器内部错误: ${e.message}` });
-  } finally {
-    if (filePathToClean && fs.existsSync(filePathToClean)) {
-      try { fs.unlinkSync(filePathToClean); } catch (_) {}
+      const imgId = resp.data.insertId || (resp.data.data && resp.data.data.insertId);
+      // 2. 生成预签名url（有效期30分钟）
+      const url = await minioClient.presignedPutObject(BUCKET, objectName, 30 * 60);
+      communityImageList.push({ id: imgId, url });
     }
+    res.json({ code: 200, data: { communityImageList } });
+  } catch (e) {
+    res.status(500).json({ code: 500, msg: e.message });
   }
 });
+
+// 2. 标记图片上传完成（POST /upload/complete）
+router.post('/complete', async (req, res) => {
+  try {
+    const { id } = req.body;
+    if (!id) return res.json({ code: 400, msg: '缺少图片id' });
+    // apisql更新图片表status
+    await axios.post(`${APISQL_BASE_URL}/update/postimgstatus`, {
+      params: { id, status: '已完成' }
+    });
+    res.json({ code: 200, msg: '图片状态已更新' });
+  } catch (e) {
+    res.status(500).json({ code: 500, msg: e.message });
+  }
+});
+
 module.exports = router;

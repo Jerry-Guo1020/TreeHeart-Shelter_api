@@ -6,11 +6,9 @@ const Response = require('../entity/http/Response'); // 确保引入 Response
 // 移除 /wechat-login 路由，因为不再需要微信登录
 
 // 游客登录接口 (现在用于设备ID登录)
-router.post('/guest-login', async (req, res) => {
+router.post('/register', async (req, res) => {
   try {
-    // 从请求体中获取 deviceId, nickname, avatar
-    const { deviceId, nickname, avatar } = req.body;
-    const result = await loginService.guestLogin({ deviceId, nickname, avatar });
+    const result = await loginService.register();
     res.status(result.code).json(result);
   } catch (err) {
     console.error('游客登录接口错误:', err);

@@ -28,7 +28,7 @@ exports.getUserById = async (id) => {
   }
 };
 
-// 移除原有的 getUserByDeviceId 方法，因为我们将重用 getUserByOpenid
+
 
 // 修改：getUserByOpenid 现在用于根据 deviceId 查询用户 (重用 openid 字段)
 exports.getUserByOpenid = async (deviceId) => { // 参数名改为 deviceId 更清晰
@@ -53,7 +53,7 @@ exports.addUser = async (user) => {
       VALUES (?, ?, ?, ?, ?, ?, ?)`; // 移除 deviceId 字段，因为我们用 openid 存储
     const data = [
       user.userTypeId,
-      user.deviceId || null, // 将 user.deviceId 插入到 openid 字段
+      user.openid, // <--- 修正：直接使用 user.openid
       user.nickname,
       user.avatar,
       user.username,
